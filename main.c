@@ -1,19 +1,20 @@
 
 #include "raylib.h"
 
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <sys/stat.h>
 #include "pthread.h"
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
-#define BUFFER_LEN 1
+#define BUFFER_LEN 10
 typedef struct {
   char *org;
   char *dest;
   unsigned char stop;
   float progress;
+  float progress_folder;
 
 } copy_args;
 
@@ -22,36 +23,39 @@ void *copy_file(void *_arg) {
 
   int org_size;
   unsigned long read_bytes = 0;
-  char *buf = malloc((sizeof(char))*BUFFER_LEN);  
+  char *buf = malloc((sizeof(char)) * BUFFER_LEN);
   int fd_org = open(arg->org, O_RDONLY);
-  int fd_dest = open(arg->dest, O_WRONLY | O_CREAT | O_TRUNC, 0700);
+  int fd_dest = open(arg->dest, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 
   //ver o tamanho do arquivo da origem
   org_size = (int)lseek(fd_org, 0, SEEK_END);
-  // org_size = ftell(fd_org);
   lseek(fd_org, 0, SEEK_SET);
-  lseek(fd_dest, 0, SEEK_SET);
-  
-  
+  // lseek(fd_dest, 0, SEEK_SET);
+
   while (!arg->stop) {
     read_bytes = read(fd_org, buf, BUFFER_LEN);
 
     if (read_bytes <= 0) {
       break;
     }
+    sleep(1);
     write(fd_dest, buf, read_bytes);
-    arg->progress +=  ((float) read_bytes/org_size)*100;
-    // sleep(1);
-    // printf("progresso %.02f\n",((float) read_bytes/org_size)*100);
+    arg->progress += ((float)read_bytes / org_size) * 100;
   }
   close(fd_org);
   close(fd_dest);
 
-  if(arg->stop){
-    int status = remove(arg->dest);
-  }
+  if (arg->stop) {
+    arg->progress = 0;
 
-  
+    int status = remove(arg->dest);
+
+    //checar o estado de deletar do arquivo
+    if (status != 0) {
+      printf("Unable to delete the file\n");
+      perror("Following error occurred");
+    }
+  }
 
   return 0;
 }
@@ -61,17 +65,17 @@ int main(int argc, char *argv[]) {
 
   // Initialization
   //--------------------------------------------------------------------------------------
-  if( argc < 3){
-    printf("FEW ARGUMENTS\n");
+  if (argc < 3) {
+    printf("ERROR: MISSING ARGUMENTS\n");
     exit(1);
   }
 
-  copy_args *_arg  = malloc(sizeof(copy_args));
+  copy_args *_arg = malloc(sizeof(copy_args));
   _arg->org = argv[1];
   _arg->dest = argv[2];
   _arg->progress = 0;
+  _arg->progress_folder = 0;
   _arg->stop = 0;
-
 
   pthread_create(&t, NULL, copy_file, _arg);
 
@@ -105,7 +109,6 @@ int main(int argc, char *argv[]) {
     DrawText(buf, 40, boxPositionY - 20, 20, GRAY);
     DrawRectangle(40, boxPositionY, (int)_arg->progress * 7.2, 20, MAROON);
 
- 
     DrawRectangleRec(textBox, ORANGE);
     DrawText("CANCELAR!", textBox.x + 5, textBox.y + 5, 15, BLACK);
 
