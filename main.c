@@ -8,17 +8,19 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <dirent.h>
+unsigned char stop;
 #define BUFFER_LEN 10
 typedef struct {
   char *org;
   char *dest;
-  unsigned char stop;
+
   float progress;
   float progress_folder;
 
 } copy_args;
 
-void *copy_file(void *_arg) {
+void *copy(void *_arg) {
   copy_args *arg = _arg;
 
   int org_size;
@@ -32,20 +34,20 @@ void *copy_file(void *_arg) {
   lseek(fd_org, 0, SEEK_SET);
   // lseek(fd_dest, 0, SEEK_SET);
 
-  while (!arg->stop) {
+  while (!stop) {
     read_bytes = read(fd_org, buf, BUFFER_LEN);
 
     if (read_bytes <= 0) {
       break;
     }
-    sleep(1);
+    // sleep(1);
     write(fd_dest, buf, read_bytes);
     arg->progress += ((float)read_bytes / org_size) * 100;
   }
   close(fd_org);
   close(fd_dest);
 
-  if (arg->stop) {
+  if (stop) {
     arg->progress = 0;
 
     int status = remove(arg->dest);
@@ -75,20 +77,16 @@ int main(int argc, char *argv[]) {
   _arg->dest = argv[2];
   _arg->progress = 0;
   _arg->progress_folder = 0;
-  _arg->stop = 0;
+  stop = 0;
 
-  pthread_create(&t, NULL, copy_file, _arg);
+  pthread_create(&t, NULL, copy, _arg);
 
   int screenWidth = 800;
   int screenHeight = 450;
   int boxPositionY = screenHeight / 2;
   Rectangle textBox = {40, 295, 90, 25};
 
-  // if (CheckCollisionPointRec(GetMousePosition(), textBox))
-  // {
-
-  // }
-  InitWindow(screenWidth, screenHeight, "");
+  InitWindow(screenWidth, screenHeight, "uicp");
   SetTargetFPS(60);
   //--------------------------------------------------------------------------------------
   // Main game loop
@@ -98,12 +96,15 @@ int main(int argc, char *argv[]) {
 
     if (CheckCollisionPointRec(GetMousePosition(), textBox) && IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
       printf("CANCELAR!\n");
-      _arg->stop = 1;
+      stop = 1;
     }
 
     ClearBackground(RAYWHITE);
     BeginDrawing();
     DrawText("Thread Lab - David Fogelman", 40, 20, 20, LIGHTGRAY);
+    sprintf(buf, "%.02f%%", _arg->progress);
+    DrawText(buf, 40, boxPositionY - 70, 20, GRAY);
+    DrawRectangle(40, boxPositionY - 50, (int)_arg->progress * 7.2, 20, MAROON);
 
     sprintf(buf, "%.02f%%", _arg->progress);
     DrawText(buf, 40, boxPositionY - 20, 20, GRAY);
@@ -115,6 +116,7 @@ int main(int argc, char *argv[]) {
     EndDrawing();
   }
   CloseWindow(); // Close window and OpenGL context
-
+  pthread_kill(t, 9);
+  // pthread_cancel(t);
   return 0;
 }
