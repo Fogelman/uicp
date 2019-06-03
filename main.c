@@ -61,14 +61,35 @@ void copy_file(char *org, char *dest, copy_args *arg) {
 }
 
 void *copy(void *_arg) {
+  copy_args *arg = _arg;
 
-  if (dir) {
+  struct stat st;
+  char *buf_org = malloc((sizeof(char)) * 25);
+  char *buf_dest = malloc((sizeof(char)) * 25);
+
+  stat(arg->org, &st);
+
+  if (S_ISDIR(st.st_mode)) {
+
+    DIR *dp;
+    struct dirent *ep;
+    dp = opendir("./");
+
+    if (dp != NULL) {
+      while ((ep = readdir(dp)) != NULL) {
+        printf("%s\n", ep->d_name);
+      }
+
+      closedir(dp);
+    } else
+      perror("Couldn't open the directory");
+
+    return 0;
 
     if (stat(arg->dest, &st) == -1) {
       mkdir(arg->dest, 0700);
     }
   }
-  copy_args *arg = _arg;
   copy_file(arg->org, arg->dest, arg);
   return 0;
 }
