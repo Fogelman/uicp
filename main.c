@@ -77,6 +77,10 @@ void *copy(void *_arg) {
     struct dirent *ep;
     dp = opendir(arg->org);
 
+    if (stat(arg->dest, &st) == -1) {
+      mkdir(arg->dest, 0700);
+    }
+
     if (dp != NULL) {
       while ((ep = readdir(dp)) != NULL) {
 
@@ -84,21 +88,23 @@ void *copy(void *_arg) {
 
           sprintf(buf_org, "%s/%s", arg->org, ep->d_name);
           sprintf(buf_dest, "%s/%s", arg->dest, ep->d_name);
+          printf("origem: %s\n", buf_org);
+          printf("destino: %s\n", buf_dest);
           copy_file(buf_org, buf_dest, arg);
         }
       }
 
       closedir(dp);
-    } else
+    } else {
       perror("Couldn't open the directory");
+    }
 
     return 0;
 
-    if (stat(arg->dest, &st) == -1) {
-      mkdir(arg->dest, 0700);
-    }
+  } else {
+    copy_file(arg->org, arg->dest, arg);
   }
-  copy_file(arg->org, arg->dest, arg);
+
   return 0;
 }
 
