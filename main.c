@@ -20,14 +20,12 @@ typedef struct {
 
 } copy_args;
 
-void *copy(void *_arg) {
-  copy_args *arg = _arg;
-
+void copy_file(char *org, char *dest, copy_args *arg) {
   int org_size;
   unsigned long read_bytes = 0;
   char *buf = malloc((sizeof(char)) * BUFFER_LEN);
-  int fd_org = open(arg->org, O_RDONLY);
-  int fd_dest = open(arg->dest, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+  int fd_org = open(org, O_RDONLY);
+  int fd_dest = open(dest, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 
   //ver o tamanho do arquivo da origem
   org_size = (int)lseek(fd_org, 0, SEEK_END);
@@ -59,6 +57,19 @@ void *copy(void *_arg) {
     }
   }
 
+  return;
+}
+
+void *copy(void *_arg) {
+
+  if (dir) {
+
+    if (stat(arg->dest, &st) == -1) {
+      mkdir(arg->dest, 0700);
+    }
+  }
+  copy_args *arg = _arg;
+  copy_file(arg->org, arg->dest, arg);
   return 0;
 }
 
