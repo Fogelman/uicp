@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -21,6 +22,7 @@ typedef struct {
 } copy_args;
 
 void copy_file(char *org, char *dest, copy_args *arg) {
+  arg->progress = 0;
   int org_size;
   unsigned long read_bytes = 0;
   char *buf = malloc((sizeof(char)) * BUFFER_LEN);
@@ -73,11 +75,17 @@ void *copy(void *_arg) {
 
     DIR *dp;
     struct dirent *ep;
-    dp = opendir("./");
+    dp = opendir(arg->org);
 
     if (dp != NULL) {
       while ((ep = readdir(dp)) != NULL) {
-        printf("%s\n", ep->d_name);
+
+        if (strcmp(".", ep->d_name) != 0 && strcmp("..", ep->d_name) != 0) {
+
+          sprintf(buf_org, "%s/%s", arg->org, ep->d_name);
+          sprintf(buf_dest, "%s/%s", arg->dest, ep->d_name);
+          copy_file(buf_org, buf_dest, arg);
+        }
       }
 
       closedir(dp);
