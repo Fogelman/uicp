@@ -40,7 +40,7 @@ void copy_file(char *org, char *dest, copy_args *arg) {
     if (read_bytes <= 0) {
       break;
     }
-    // sleep(1);
+    sleep(1);
     write(fd_dest, buf, read_bytes);
     arg->progress += ((float)read_bytes / org_size) * 100;
   }
@@ -50,7 +50,7 @@ void copy_file(char *org, char *dest, copy_args *arg) {
   if (stop) {
     arg->progress = 0;
 
-    int status = remove(arg->dest);
+    int status = remove(dest);
 
     //checar o estado de deletar do arquivo
     if (status != 0) {
@@ -82,15 +82,32 @@ void *copy(void *_arg) {
     }
 
     if (dp != NULL) {
+
+      int count_file = 0;
       while ((ep = readdir(dp)) != NULL) {
 
-        if (strcmp(".", ep->d_name) != 0 && strcmp("..", ep->d_name) != 0) {
+        sprintf(buf_org, "%s/%s", arg->org, ep->d_name);
+        stat(buf_org, &st);
+        if (S_ISDIR(st.st_mode)) {
+          continue;
+        }
+        count_file++;
+      }
+      rewinddir(dp);
+
+      if (count_file > 0) {
+
+        printf("OPA TENHO ARQUIVOS\n!");
+        while ((ep = readdir(dp)) != NULL) {
 
           sprintf(buf_org, "%s/%s", arg->org, ep->d_name);
           sprintf(buf_dest, "%s/%s", arg->dest, ep->d_name);
-          printf("origem: %s\n", buf_org);
-          printf("destino: %s\n", buf_dest);
-          copy_file(buf_org, buf_dest, arg);
+          stat(buf_org, &st);
+
+          if (S_ISDIR(st.st_mode) == 0 && strcmp(".", ep->d_name) != 0 && strcmp("..", ep->d_name) != 0) {
+            copy_file(buf_org, buf_dest, arg);
+            arg->progress_folder += ((float)1 / count_file) * 100;
+          }
         }
       }
 
@@ -152,9 +169,9 @@ int main(int argc, char *argv[]) {
     DrawText(buf, 40, boxPositionY - 70, 20, GRAY);
     DrawRectangle(40, boxPositionY - 50, (int)_arg->progress * 7.2, 20, MAROON);
 
-    sprintf(buf, "%.02f%%", _arg->progress);
+    sprintf(buf, "%.02f%%", _arg->progress_folder);
     DrawText(buf, 40, boxPositionY - 20, 20, GRAY);
-    DrawRectangle(40, boxPositionY, (int)_arg->progress * 7.2, 20, MAROON);
+    DrawRectangle(40, boxPositionY, (int)_arg->progress_folder * 7.2, 20, MAROON);
 
     DrawRectangleRec(textBox, ORANGE);
     DrawText("CANCELAR!", textBox.x + 5, textBox.y + 5, 15, BLACK);
